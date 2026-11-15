@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dnsipam — [REDACTED:internal-ipv6]/48</title>
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<style>
+:root{
+  --bg:#0e1319; --panel:#151c25; --panel2:#1b2431; --line:#28323f;
+  --text:#d8e0ea; --dim:#8a97a8; --accent:#4ea1ff; --green:#3ecf8e;
+  --amber:#f5b453; --purple:#b18cf0; --red:#f2716c; --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:14px/1.5 system-ui,-apple-system,'Segoe UI',sans-serif}
+a{color:var(--accent);text-decoration:none}
+header{padding:18px 24px 0;border-bottom:1px solid var(--line)}
+h1{margin:0;font-size:19px;font-weight:600}
+h1 .mono{color:var(--accent)}
+.sub{color:var(--dim);font-size:12.5px;margin:4px 0 12px}
+.sub .mono{font-family:var(--mono)}
+.strip{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.chip{background:var(--panel2);border:1px solid var(--line);border-radius:6px;
+  padding:4px 10px;font-size:12px;color:var(--dim)}
+.chip b{color:var(--text);font-weight:600}
+.chip .mono{font-family:var(--mono)}
+.chip.ok b{color:var(--green)} .chip.bad b{color:var(--red)}
+nav{display:flex;gap:2px}
+nav button{background:none;border:none;border-bottom:2px solid transparent;
+  color:var(--dim);padding:8px 14px;font:inherit;font-size:13.5px;cursor:pointer}
+nav button.active{color:var(--text);border-bottom-color:var(--accent)}
+main{padding:20px 24px 60px;max-width:1180px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;
+  padding:16px;margin-bottom:16px}
+.card h2{margin:0 0 12px;font-size:14px;font-weight:600;color:var(--dim);
+  text-transform:uppercase;letter-spacing:.06em}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:12px;margin-bottom:16px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px}
+.stat .n{font-size:24px;font-weight:700;font-family:var(--mono)}
+.stat .l{font-size:11.5px;color:var(--dim);margin-top:2px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{color:var(--dim);font-weight:500;text-align:left;padding:6px 10px;
+  border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:6px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:hover td{background:#1a2230}
+.mono{font-family:var(--mono);font-size:12.5px}
+.dim{color:var(--dim)}
+.badge{display:inline-block;border-radius:5px;padding:1px 8px;font-size:11px;
+  font-weight:600;margin-right:6px}
+.k-used{background:#173a52;color:#7cc4ff}
+.k-rented{background:#4a3413;color:#f5b453}
+.k-reserved{background:#322250;color:#b18cf0}
+.btn{background:var(--panel2);border:1px solid var(--line);border-radius:6px;
+  color:var(--text);padding:5px 12px;font:inherit;font-size:12.5px;cursor:pointer}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:#1c4d80;border-color:#2a6cb8}
+.btn.danger{border-color:#7a3a38;color:var(--red)}
+.btn.small{padding:2px 8px;font-size:11.5px}
+input,select,textarea{background:#0f1620;border:1px solid var(--line);border-radius:6px;
+  color:var(--text);padding:6px 9px;font:inherit;font-size:13px;width:100%}
+input:focus,select:focus{outline:none;border-color:var(--accent)}
+label{display:block;font-size:12px;color:var(--dim);margin:8px 0 3px}
+form .row{display:flex;gap:10px}
+form .row>div{flex:1}
+.crumb{display:flex;flex-wrap:wrap;align-items:center;gap:2px;margin-bottom:10px;
+  font-family:var(--mono);font-size:12.5px}
+.crumb a{color:var(--dim);padding:2px 5px;border-radius:4px}
+.crumb a:hover{background:var(--panel2);color:var(--accent)}
+.crumb .cur{color:var(--accent);padding:2px 5px}
+.msg{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
+  background:var(--panel2);border:1px solid var(--line);border-radius:8px;
+  padding:10px 18px;font-size:13px;box-shadow:0 4px 18px #0008;display:none;z-index:9}
+.msg.err{border-color:var(--red);color:var(--red)}
+.modal{position:fixed;inset:0;background:#000a;display:none;z-index:8;
+  align-items:flex-start;justify-content:center;padding:60px 16px}
+.modal .box{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  padding:18px;width:520px;max-width:100%;max-height:80vh;overflow:auto}
+.modal h3{margin:0 0 10px;font-size:15px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px}
+.kv .k{color:var(--dim)}
+.actions{display:flex;gap:8px;margin-top:14px;justify-content:flex-end}
+.empty{color:var(--dim);font-style:italic;padding:14px;text-align:center}
+.nib{display:inline-block;width:14px;color:var(--dim)}
+.rec-count,.ann-count{font-size:11px;color:var(--dim);white-space:nowrap}
+.section-note{font-size:12px;color:var(--dim);margin:6px 0 12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>dnsipam <span class="mono" id="hdrPrefix"></span></h1>
+  <div class="sub">Reverse zone <span class="mono" id="hdrZone"></span> · delegated to
+    <span class="mono" id="hdrNs"></span> · access <b>SSO&nbsp;+&nbsp;VPN</b> ·
+    <a href="https://sso.inbox.li/sso/">sso.inbox.li</a></div>
+  <div class="strip" id="strip"></div>
+  <nav id="tabs">
+    <button data-tab="overview" class="active">Overview</button>
+    <button data-tab="browse">Browse / IPAM</button>
+    <button data-tab="records">DNS records</button>
+    <button data-tab="free">Free space</button>
+    <button data-tab="log">Log</button>
+  </nav>
+</header>
+<main>
+
+<!-- ================= OVERVIEW ================= -->
+<section id="tab-overview">
+  <div class="cards" id="ovCards"></div>
+  <div class="card">
+    <h2>Register — used / rented / reserved space</h2>
+    <div class="section-note">Everything marked in this /48, largest block first. Click a block to open it in the browser.</div>
+    <table id="regTable">
+      <thead><tr><th>block</th><th>kind</th><th>label</th><th>comment</th>
+        <th>price</th><th>renewal</th><th>contact</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="empty" id="regEmpty" style="display:none">Nothing annotated yet — everything in the /48 is unassigned.</div>
+  </div>
+  <div class="card">
+    <h2>Zone</h2>
+    <div class="kv" id="zoneKv"></div>
+  </div>
+</section>
+
+<!-- ================= BROWSE ================= -->
+<section id="tab-browse" style="display:none">
+  <div class="crumb" id="crumb"></div>
+  <div class="card">
+    <table id="treeTable">
+      <thead><tr><th></th><th>block</th><th>status</th><th>under it</th><th style="width:170px"></th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div id="nodePanel"></div>
+</section>
+
+<!-- ================= RECORDS ================= -->
+<section id="tab-records" style="display:none">
+  <div class="card">
+    <h2>PTR records in the zone</h2>
+    <div class="section-note">Every change re-renders the zone file and reloads named over rndc immediately.</div>
+    <table id="recTable">
+      <thead><tr><th>address</th><th>points to</th><th>TTL</th><th>comment</th><th>updated</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="empty" id="recEmpty" style="display:none">No PTR records yet. Add one below — the zone serves it within a second.</div>
+  </div>
+  <div class="card">
+    <h2>Add a PTR record</h2>
+    <form id="recForm">
+      <div class="row">
+        <div><label>address (inside [REDACTED:internal-ipv6]/48)</label><input id="recAddr" class="mono" placeholder="[REDACTED:internal-ipv6]"></div>
+        <div><label>points to (hostname)</label><input id="recPtr" placeholder="host.inbox.li"></div>
+      </div>
+      <div class="row">
+        <div><label>TTL (seconds, optional)</label><input id="recTtl" type="number" min="60" max="604800" placeholder="3600"></div>
+        <div><label>comment (optional)</label><input id="recComment" placeholder="what is this host"></div>
+      </div>
+      <div class="actions"><button class="btn primary" type="submit">Add record</button></div>
+    </form>
+  </div>
+</section>
+
+<!-- ================= FREE SPACE ================= -->
+<section id="tab-free" style="display:none">
+  <div class="card">
+    <h2>Find unused space</h2>
+    <div class="section-note">Aligned blocks of the chosen size that carry no annotation. Scanned from the start of the /48; the first 100 are shown.</div>
+    <div style="display:flex;gap:10px;align-items:end;max-width:420px">
+      <div style="flex:1"><label>block size</label>
+        <select id="freeBits"></select></div>
+      <button class="btn primary" id="freeGo">Find</button>
+    </div>
+    <div id="freeOut" style="margin-top:14px"></div>
+  </div>
+</section>
+
+<!-- ================= LOG ================= -->
+<section id="tab-log" style="display:none">
+  <div class="card">
+    <h2>Event log (last 100)</h2>
+    <table id="logTable">
+      <thead><tr><th>time</th><th>action</th><th>detail</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+</main>
+
+<!-- ================= NODE MODAL ================= -->
+<div class="modal" id="modal">
+  <div class="box" id="modalBox"></div>
+</div>
+<!-- ================= ANNOTATE MODAL ================= -->
+<div class="modal" id="annModal">
+  <div class="box">
+    <h3 id="annTitle">Annotate</h3>
+    <form id="annForm">
+      <div class="row">
+        <div><label>kind</label>
+          <select id="annKind">
+            <option value="used">used — in use by me</option>
+            <option value="rented">rented — leased out</option>
+            <option value="reserved">reserved — set aside</option>
+          </select></div>
+        <div><label>label (short name)</label><input id="annLabel" placeholder="e.g. NL site"></div>
+      </div>
+      <label>comment</label><input id="annComment" placeholder="what lives here">
+      <div class="row">
+        <div><label>price (for rentals)</label><input id="annPrice" placeholder="e.g. €5/mo or free"></div>
+        <div><label>renewal</label><input id="annRenewal" placeholder="e.g. 2027-01-01 or on request"></div>
+      </div>
+      <label>contact (optional)</label><input id="annContact" placeholder="who to talk to about this block">
+      <div class="actions">
+        <button type="button" class="btn" onclick="closeAnn()">Cancel</button>
+        <button class="btn primary" type="submit" id="annSubmit">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="msg" id="msg"></div>
+
+<script>
+'use strict';
+const PREFIX = '[REDACTED:internal-ipv6]/48';
+const KIND_COLOR = {used:'#7cc4ff', rented:'#f5b453', reserved:'#b18cf0'};
+let state = {overview:null, tree:null, node:null, records:null, anns:null};
+let cur = {prefix:'[REDACTED:internal-ipv6]', bits:48};
+let annTarget = null;   // {prefix,bits} or annotation row being edited
+
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+
+async function api(path, opts) {
+  const res = await fetch(path, opts);
+  const ct = res.headers.get('content-type') || '';
+  if (!ct.includes('json')) { window.location.href = res.url; throw new Error('SSO redirect'); }
+  const data = await res.json();
+  if (!res.ok && !data.error) throw new Error('HTTP ' + res.status);
+  return data;
+}
+function msg(text, err) {
+  const el = $('#msg'); el.textContent = text;
+  el.className = 'msg' + (err ? ' err' : ''); el.style.display = 'block';
+  clearTimeout(el._t); el._t = setTimeout(() => el.style.display = 'none', 5000);
+}
+function badge(kind, label) {
+  return `<span class="badge k-${kind}">${kind}${label ? ' · ' + esc(label) : ''}</span>`;
+}
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g,
+    c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ---------- tabs ----------
+$$('#tabs button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+function showTab(name) {
+  $$('#tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  $$('main > section').forEach(s => s.style.display = s.id === 'tab-' + name ? '' : 'none');
+  const loaders = {overview: loadOverview, browse: () => loadTree(cur), records: loadRecords,
+                   free: null, log: loadLog};
+  if (loaders[name]) loaders[name]();
+}
+
+// ---------- header + overview ----------
+async function loadAll() {
+  const ov = await api('/api/overview');
+  if (!ov.ok) throw new Error(ov.error);
+  state.overview = ov;
+  $('#hdrPrefix').textContent = ov.prefix;
+  $('#hdrZone').textContent = ov.zone;
+  $('#hdrNs').textContent = ov.nameservers.join(', ');
+  const b = ov.bind;
+  const bindChip = b.ok
+    ? `<div class="chip ok">BIND loaded · serial <b class="mono">${esc(b.serial ?? '?')}</b></div>`
+    : `<div class="chip bad">BIND: <b>${esc(b.error || 'unreachable')}</b></div>`;
+  $('#strip').innerHTML =
+    `<div class="chip">access <b>SSO + VPN</b></div>
+     <div class="chip">PTR records <b>${ov.records}</b></div>
+     <div class="chip">annotations <b>${ov.annotations}</b></div>
+     <div class="chip">free /64s <b>${ov.free_64s.toLocaleString()}</b> / ${ov.total_64s.toLocaleString()}</div>` + bindChip;
+  return ov;
+}
+
+async function loadOverview() {
+  try {
+    const ov = await loadAll();
+    $('#ovCards').innerHTML = `
+      <div class="stat"><div class="n">${ov.records}</div><div class="l">PTR records served</div></div>
+      <div class="stat"><div class="n">${ov.annotations}</div><div class="l">annotated blocks</div></div>
+      <div class="stat"><div class="n" style="color:${ov.free_64s > 0 ? 'var(--green)' : 'var(--amber)'}">${ov.free_64s.toLocaleString()}</div><div class="l">/64 blocks untouched</div></div>
+      <div class="stat"><div class="n mono" style="font-size:16px">${esc(ov.prefix)}</div><div class="l">delegated prefix</div></div>`;
+    // register
+    const anns = (await api('/api/annotations')).annotations;
+    state.anns = anns;
+    const tb = $('#regTable tbody');
+    tb.innerHTML = anns.map(a => `
+      <tr>
+        <td><a href="#" class="mono" onclick="openBlock('${a.prefix}',${a.bits});return false">${esc(a.prefix)}/${a.bits}</a></td>
+        <td>${badge(a.kind)}</td>
+        <td>${esc(a.label)}</td>
+        <td class="dim">${esc(a.comment)}</td>
+        <td class="mono">${esc(a.price) || '<span class="dim">—</span>'}</td>
+        <td class="mono">${esc(a.renewal) || '<span class="dim">—</span>'}</td>
+        <td class="dim">${esc(a.contact)}</td>
+        <td><button class="btn small" onclick="editAnn(${a.id})">edit</button></td>
+      </tr>`).join('');
+    $('#regEmpty').style.display = anns.length ? 'none' : '';
+    $('#zoneKv').innerHTML = `
+      <div class="k">origin</div><div class="mono">${esc(ov.zone)}</div>
+      <div class="k">nameservers</div><div class="mono">${ov.nameservers.map(esc).join('<br>')}</div>
+      <div class="k">BIND</div><div>${ov.bind.ok
+        ? `loaded serial <span class="mono">${esc(ov.bind.serial)}</span> · last load ${esc(ov.bind.last_load_timestamp ?? ov.bind.soa_seen ?? '')}`
+        : `<span style="color:var(--red)">${esc(ov.bind.error)}</span>`}</div>
+      <div class="k">delegation</div><div>the ISP points <span class="mono">ns3.inbox.li</span> and <span class="mono">ns4.william.hr</span> at this box; those names must resolve publicly before the ISP's delegation starts answering</div>`;
+  } catch (e) { msg(e.message, true); }
+}
+
+// ---------- browse ----------
+const NIBS = '0123456789abcdef';
+function pathOf(prefix, bits) {
+  // nibble steps from /48 down to `bits`
+  const n = (bits - 48) / 4;
+  const steps = [];
+  let p = prefix;
+  for (let i = 0; i < n; i++) steps.push({prefix: p, bits: 48 + (i + 1) * 4});
+  return steps;
+}
+async function loadTree(at) {
+  cur = at || {prefix: '[REDACTED:internal-ipv6]', bits: 48};
+  const crumb = $('#crumb');
+  crumb.innerHTML =
+    `<a href="#" onclick="loadTree({prefix:'[REDACTED:internal-ipv6]',bits:48});return false">${PREFIX}</a>` +
+    pathOf(cur.prefix, cur.bits).map((s, i) =>
+      `<span>/</span><a href="#" onclick="loadTree({prefix:'${s.prefix}',bits:${s.bits}});return false">${s.prefix}/${s.bits}</a>`
+    ).join('') + `<span>/</span><span class="cur">${esc(cur.prefix)}/${cur.bits}</span>` +
+    (cur.bits < 128 ? ` <button class="btn small" style="margin-left:10px" onclick="openAnn({prefix:'${cur.prefix}',bits:${cur.bits}})">annotate this block</button>` : '');
+  const data = await api(`/api/tree?prefix=${encodeURIComponent(cur.prefix)}&bits=${cur.bits}`);
+  const tb = $('#treeTable tbody');
+  tb.innerHTML = data.children.map(c => {
+    const cov = c.covering[0];
+    const status = cov ? badge(cov.kind, cov.label)
+      : c.annotations_below ? `<span class="dim">${c.annotations_below} annotated inside</span>`
+      : '<span class="dim">—</span>';
+    const under = (c.annotations_below ? `${c.annotations_below} ann · ` : '') +
+      (c.records_below ? `${c.records_below} ptr` : '');
+    return `<tr>
+      <td class="nib">${c.nibble}</td>
+      <td><a href="#" class="mono" onclick="loadTree({prefix:'${c.prefix}',bits:${c.bits}});return false">${esc(c.prefix)}/${c.bits}</a></td>
+      <td>${status}</td>
+      <td class="rec-count">${under}</td>
+      <td style="text-align:right">
+        <button class="btn small" onclick="loadTree({prefix:'${c.prefix}',bits:${c.bits}})">open</button>
+        <button class="btn small" onclick="nodeDetail('${c.prefix}',${c.bits})">details</button>
+      </td></tr>`;
+  }).join('');
+  if (cur.bits >= 128) $('#treeTable tbody').innerHTML =
+    `<tr><td colspan="5" class="empty">/128 is a single address — use “details” above or the DNS records tab.</td></tr>`;
+}
+
+async function nodeDetail(prefix, bits) {
+  const d = await api(`/api/node?prefix=${encodeURIComponent(prefix)}&bits=${bits}`);
+  const cov = d.covering.map(c => `<div>${badge(c.kind, c.label)} <span class="dim">${esc(c.comment)}</span></div>`).join('') || '<span class="dim">none</span>';
+  const here = d.here.map(a => `<div style="margin:6px 0">${badge(a.kind, a.label)}
+      <span class="dim">${esc(a.comment)}</span>
+      ${a.price ? ` · <span class="mono">${esc(a.price)}</span>` : ''}
+      ${a.renewal ? ` · renews <span class="mono">${esc(a.renewal)}</span>` : ''}
+      <button class="btn small" style="margin-left:8px" onclick="editAnn(${a.id})">edit</button></div>`).join('')
+    || '<span class="dim">none on this exact block</span>';
+  const below = d.below.map(a => `<div style="margin:4px 0"><a href="#" class="mono" onclick="openBlock('${a.prefix}',${a.bits});return false">${esc(a.prefix)}/${a.bits}</a>
+      ${badge(a.kind, a.label)} <span class="dim">${esc(a.comment)}</span></div>`).join('')
+    || '<span class="dim">none</span>';
+  const recs = d.records.map(r => `<div class="mono">${esc(r.address)} → ${esc(r.ptr)}</div>`).join('')
+    || '<span class="dim">no PTR records under this block</span>';
+  const isAddr = bits === 128;
+  $('#modalBox').innerHTML = `
+    <h3 class="mono">${esc(prefix)}/${bits}</h3>
+    <div class="kv">
+      <div class="k">covered by</div><div>${cov}</div>
+      <div class="k">annotation here</div><div>${here}</div>
+      <div class="k">annotations inside</div><div>${below}</div>
+      <div class="k">records inside</div><div>${recs}</div>
+    </div>
+    <div class="actions">
+      <button class="btn" onclick="closeModal()">Close</button>
+      ${!d.here.length && !isAddr ? `<button class="btn primary" onclick="openAnn({prefix:'${prefix}',bits:${bits}})">Annotate</button>` : ''}
+      ${isAddr && !d.records.length ? `<button class="btn primary" onclick="prefillRecord('${prefix}')">Create PTR</button>` : ''}
+      ${isAddr && d.records.length ? '' : ''}
+    </div>`;
+  $('#modal').style.display = 'flex';
+}
+function closeModal() { $('#modal').style.display = 'none'; }
+$('#modal').onclick = e => { if (e.target === $('#modal')) closeModal(); };
+function openBlock(prefix, bits) {
+  showTab('browse');
+  if (bits >= 128 || bits <= 124) loadTree({prefix, bits: Math.min(124, Math.max(48, bits))});
+  else loadTree({prefix, bits: bits - 4});
+  nodeDetail(prefix, bits);
+}
+function prefillRecord(addr) {
+  closeModal(); showTab('records');
+  $('#recAddr').value = addr; $('#recPtr').focus();
+}
+
+// ---------- annotate modal ----------
+function openAnn(target) {
+  annTarget = target;
+  $('#annTitle').textContent = `Annotate ${target.prefix}/${target.bits}`;
+  $('#annKind').value = 'rented'; $('#annLabel').value = ''; $('#annComment').value = '';
+  $('#annPrice').value = ''; $('#annRenewal').value = ''; $('#annContact').value = '';
+  $('#annSubmit').textContent = 'Save';
+  $('#annModal').style.display = 'flex'; $('#annLabel').focus();
+}
+async function editAnn(id) {
+  if (!state.anns) state.anns = (await api('/api/annotations')).annotations;
+  const a = state.anns.find(x => x.id === id);
+  if (!a) return;
+  annTarget = {edit: id};
+  $('#annTitle').textContent = `Edit annotation ${a.prefix}/${a.bits}`;
+  $('#annKind').value = a.kind; $('#annLabel').value = a.label; $('#annComment').value = a.comment;
+  $('#annPrice').value = a.price; $('#annRenewal').value = a.renewal; $('#annContact').value = a.contact;
+  $('#annSubmit').textContent = 'Save changes';
+  $('#annModal').style.display = 'flex';
+}
+function closeAnn() { $('#annModal').style.display = 'none'; }
+$('#annModal').onclick = e => { if (e.target === $('#annModal')) closeAnn(); };
+$('#annForm').onsubmit = async e => {
+  e.preventDefault();
+  const payload = {
+    kind: $('#annKind').value, label: $('#annLabel').value,
+    comment: $('#annComment').value, price: $('#annPrice').value,
+    renewal: $('#annRenewal').value, contact: $('#annContact').value,
+  };
+  try {
+    let res;
+    if (annTarget.edit) {
+      res = await api(`/api/annotations/${annTarget.edit}`, {
+        method: 'PUT', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)});
+    } else {
+      res = await api('/api/annotations', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({prefix: annTarget.prefix, bits: annTarget.bits, ...payload})});
+    }
+    if (!res.ok) throw new Error(res.error);
+    closeAnn(); msg(res.message || 'saved');
+    state.anns = null; loadOverview();
+    if (!$('#tab-browse').style.display) loadTree(cur);
+    if (!$('#tab-free').style.display) $('#freeGo').click();
+  } catch (err) { msg(err.message, true); }
+};
+
+// ---------- records ----------
+async function loadRecords() {
+  const recs = (await api('/api/records')).records;
+  $('#recTable tbody').innerHTML = recs.map(r => `
+    <tr>
+      <td class="mono">${esc(r.address)}</td>
+      <td class="mono">${esc(r.ptr)}</td>
+      <td class="mono">${r.ttl}</td>
+      <td class="dim">${esc(r.comment)}</td>
+      <td class="dim">${esc(r.updated_at)}</td>
+      <td style="text-align:right;white-space:nowrap">
+        <button class="btn small" onclick='editRecord(${JSON.stringify(r).replace(/'/g, "&#39;")})'>edit</button>
+        <button class="btn small danger" onclick="delRecord(${r.id},'${esc(r.address)}')">delete</button>
+      </td></tr>`).join('');
+  $('#recEmpty').style.display = recs.length ? 'none' : '';
+}
+function editRecord(r) {
+  $('#recAddr').value = r.address; $('#recAddr').disabled = true;
+  $('#recPtr').value = r.ptr; $('#recTtl').value = r.ttl; $('#recComment').value = r.comment;
+  $('#recForm').dataset.editId = r.id;
+  $('#recForm button[type=submit]').textContent = 'Save changes';
+  $('#recAddr').scrollIntoView({behavior: 'smooth'}); $('#recPtr').focus();
+}
+function resetRecForm() {
+  $('#recForm').reset(); delete $('#recForm').dataset.editId;
+  $('#recAddr').disabled = false;
+  $('#recForm button[type=submit]').textContent = 'Add record';
+}
+$('#recForm').onsubmit = async e => {
+  e.preventDefault();
+  const id = $('#recForm').dataset.editId;
+  const payload = {address: $('#recAddr').value, ptr: $('#recPtr').value,
+                   ttl: $('#recTtl').value || null, comment: $('#recComment').value};
+  try {
+    const res = id
+      ? await api(`/api/records/${id}`, {method: 'PUT',
+          headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)})
+      : await api('/api/records', {method: 'POST',
+          headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)});
+    if (!res.ok) throw new Error(res.error);
+    resetRecForm(); msg(res.message); loadRecords(); loadAll();
+  } catch (err) { msg(err.message, true); }
+};
+async function delRecord(id, addr) {
+  if (!confirm(`Delete the PTR for ${addr}? The name stops resolving after the reload.`)) return;
+  try {
+    const res = await api(`/api/records/${id}`, {method: 'DELETE'});
+    if (!res.ok) throw new Error(res.error);
+    msg(res.message); loadRecords(); loadAll();
+  } catch (err) { msg(err.message, true); }
+}
+
+// ---------- free space ----------
+const FREE_SIZES = [48, 52, 56, 60, 64, 68, 72, 76, 80, 84, 88, 92, 96, 100, 104, 108, 112, 116, 120, 124, 128];
+$('#freeBits').innerHTML = FREE_SIZES.map(b =>
+  `<option value="${b}" ${b === 64 ? 'selected' : ''}>/${b}</option>`).join('');
+$('#freeGo').onclick = async () => {
+  const bits = +$('#freeBits').value;
+  const out = await api(`/api/free?bits=${bits}`);
+  if (!out.ok) return msg(out.error, true);
+  $('#freeOut').innerHTML = `
+    <div class="section-note">${out.blocks.length} free block(s) of ${out.blocks.length ? `/${bits}` : '/—'}
+      ${out.complete ? `— all ${out.total_blocks.toLocaleString()} block(s) scanned, none hidden` :
+      `— scan stopped at the first ${out.blocks.length}; ${out.total_blocks.toLocaleString()} block(s) of this size exist in total`}</div>` +
+    (out.blocks.length ? `<table><thead><tr><th>block</th><th style="width:260px">mark as</th></tr></thead><tbody>` +
+      out.blocks.map(b => `<tr>
+        <td class="mono">${esc(b.prefix)}/${b.bits}</td>
+        <td>
+          <button class="btn small" onclick="quickAnn('${b.prefix}',${b.bits},'used')">used</button>
+          <button class="btn small" onclick="quickAnn('${b.prefix}',${b.bits},'rented')">rented</button>
+          <button class="btn small" onclick="quickAnn('${b.prefix}',${b.bits},'reserved')">reserved</button>
+        </td></tr>`).join('') + '</tbody></table>' : '<div class="empty">nothing free of this size — everything is annotated</div>');
+};
+async function quickAnn(prefix, bits, kind) {
+  const label = prompt(`Label for ${prefix}/${bits} (${kind})`, kind === 'rented' ? '' : '');
+  if (label === null) return;
+  const comment = prompt('Comment (price / renewal can go here):', '');
+  if (comment === null) return;
+  try {
+    const res = await api('/api/annotations', {method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({prefix, bits, kind, label, comment})});
+    if (!res.ok) throw new Error(res.error);
+    msg('saved — refresh the finder'); state.anns = null;
+    $('#freeGo').click();
+  } catch (err) { msg(err.message, true); }
+}
+
+// ---------- log ----------
+async function loadLog() {
+  const ev = (await api('/api/events')).events;
+  $('#logTable tbody').innerHTML = ev.map(e => `
+    <tr><td class="dim mono" style="white-space:nowrap">${esc(e.ts)}</td>
+    <td>${e.ok ? '' : '<span style="color:var(--red)">✗ </span>'}${esc(e.action)}</td>
+    <td class="dim">${esc(e.detail)}</td></tr>`).join('')
+    || '<tr><td colspan="3" class="empty">no events yet</td></tr>';
+}
+
+// ---------- boot ----------
+loadOverview();
+</script>
+</body>
+</html>
